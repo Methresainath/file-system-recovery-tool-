@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>File System Simulator</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+
+            /* 🌈 Gradient Background */
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        h1 {
+            margin-top: 20px;
+            text-shadow: 2px 2px 5px black;
+        }
+
+        /* Glass Effect Panel */
+        .container {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            width: 90%;
+            margin: auto;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        input {
+            padding: 10px;
+            width: 220px;
+            border-radius: 8px;
+            border: none;
+            outline: none;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            transform: scale(1.1);
+            opacity: 0.9;
+        }
+
+        .create { background: #2ecc71; color: white; }
+        .delete { background: #e74c3c; color: white; }
+        .crash { background: #f39c12; color: white; }
+        .optimize { background: #3498db; color: white; }
+        .normal { background: #9b59b6; color: white; }
+
+        /* Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(10, 50px);
+            gap: 8px;
+            justify-content: center;
+            margin: 20px;
+        }
+
+        .block {
+            width: 50px;
+            height: 50px;
+            background: rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .block:hover {
+            transform: scale(1.1);
+        }
+
+        .selected {
+            background: yellow;
+            color: black;
+        }
+
+        .used {
+            background: #2ecc71;
+            color: black;
+        }
+
+        textarea {
+            width: 80%;
+            height: 150px;
+            border-radius: 10px;
+            border: none;
+            padding: 10px;
+            margin-top: 10px;
+            background: rgba(0,0,0,0.6);
+            color: #00ffcc;
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>🚀 File System Recovery & Optimization Tool</h1>
+
+<div class="container">
+
+    <input type="text" id="filename" placeholder="Enter file name">
+
+    <br><br>
+
+    <button class="create" onclick="createFile()">Create</button>
+    <button class="delete" onclick="deleteFile()">Delete</button>
+    <button class="normal" onclick="showDirectory()">Directory</button>
+    <button class="normal" onclick="searchFile()">Search</button>
+    <button class="crash" onclick="crash()">Crash</button>
+    <button class="normal" onclick="recover()">Recover</button>
+    <button class="optimize" onclick="optimize()">Optimize</button>
+    <button class="normal" onclick="fragmentation()">Fragmentation</button>
+
+    <div class="grid" id="diskGrid"></div>
+
+    <textarea id="output" readonly></textarea>
+
+</div>
+
+<script>
+const MAX_BLOCKS = 20;
+let disk = Array(MAX_BLOCKS).fill(-1);
+let files = [];
+let backup = [];
+let selectedBlocks = [];
+
+const grid = document.getElementById("diskGrid");
+
+for (let i = 0; i < MAX_BLOCKS; i++) {
+    let div = document.createElement("div");
+    div.classList.add("block");
+    div.innerText = i;
+
+    div.onclick = () => toggleBlock(i);
+
+    grid.appendChild(div);
+}
+
+function log(msg) {
+    const out = document.getElementById("output");
+    out.value += msg + "\n";
+    out.scrollTop = out.scrollHeight;
+}
+
+function updateGrid() {
+    const blocks = document.getElementsByClassName("block");
+
+    for (let i = 0; i < MAX_BLOCKS; i++) {
+        blocks[i].classList.remove("selected", "used");
+
+        if (disk[i] !== -1) {
+            blocks[i].classList.add("used");
+            blocks[i].innerText = "F" + disk[i];
+        } else {
+            blocks[i].innerText = i;
+            if (selectedBlocks.includes(i)) {
+                blocks[i].classList.add("selected");
+            }
+        }
+    }
+}
+
+function toggleBlock(i) {
+    if (disk[i] !== -1) return;
+
+    if (selectedBlocks.includes(i)) {
+        selectedBlocks = selectedBlocks.filter(x => x !== i);
+    } else {
+        selectedBlocks.push(i);
+    }
+
+    updateGrid();
+}
+
+function createFile() {
+    const name = document.getElementById("filename").value;
+
+    if (!name) return log("Enter file name!");
+    if (files.find(f => f.name === name)) return log("File exists!");
+    if (selectedBlocks.length === 0) return log("Select blocks!");
+
+    selectedBlocks.forEach(b => disk[b] = files.length);
+
+    files.push({ name, blocks: [...selectedBlocks] });
+
+    log(name + " created → " + selectedBlocks);
+
+    selectedBlocks = [];
+    updateGrid();
+}
+
+function deleteFile() {
+    const name = document.getElementById("filename").value;
+
+    let index = files.findIndex(f => f.name === name);
+    if (index === -1) return log("File not found!");
+
+    files[index].blocks.forEach(b => disk[b] = -1);
+    files.splice(index, 1);
+
+    log(name + " deleted");
+    updateGrid();
+}
+
+function showDirectory() {
+    files.forEach(f => log(f.name + " → " + f.blocks));
+}
+
+function crash() {
+    backup = JSON.parse(JSON.stringify(files));
+
+    for (let i = 0; i < 5; i++) {
+        let b = Math.floor(Math.random() * MAX_BLOCKS);
+        disk[b] = -1;
+    }
+
+    log("⚠ Crash simulated!");
+    updateGrid();
+}
+
+function recover() {
+    if (backup.length === 0) return log("No backup!");
+
+    files = JSON.parse(JSON.stringify(backup));
+    disk.fill(-1);
+
+    files.forEach((f, i) => {
+        f.blocks.forEach(b => disk[b] = i);
+    });
+
+    log("Recovery complete");
+    updateGrid();
+}
+
+function optimize() {
+    let newDisk = Array(MAX_BLOCKS).fill(-1);
+    let index = 0;
+
+    files.forEach((f, i) => {
+        let newBlocks = [];
+
+        f.blocks.forEach(() => {
+            newDisk[index] = i;
+            newBlocks.push(index);
+            index++;
+        });
+
+        f.blocks = newBlocks;
+    });
+
+    disk = newDisk;
+
+    log("Disk optimized");
+    updateGrid();
+}
+
+function fragmentation() {
+    let used = disk.filter(b => b !== -1).length;
+    let free = MAX_BLOCKS - used;
+    let frag = (free / MAX_BLOCKS) * 100;
+
+    log("Fragmentation: " + frag.toFixed(2) + "%");
+}
+
+function searchFile() {
+    const name = document.getElementById("filename").value;
+
+    let f = files.find(f => f.name === name);
+
+    if (f) log(name + " found at " + f.blocks);
+    else log("File not found");
+}
+
+updateGrid();
+</script>
+
+</body>
+</html>
