@@ -2,7 +2,7 @@ import tkinter as tk
 import random
 import copy
 
-MAX_BLOCKS = 
+MAX_BLOCKS = 30
 
 disk = [-1] * MAX_BLOCKS
 files = []
