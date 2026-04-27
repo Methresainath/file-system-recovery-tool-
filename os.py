@@ -2,7 +2,7 @@ import tkinter as tk
 import random
 import copy
 
-MAX_BLOCKS = 20
+MAX_BLOCKS = 
 
 disk = [-1] * MAX_BLOCKS
 files = []
@@ -14,7 +14,7 @@ class File:
         self.name = name
         self.blocks = blocks
 
-# ---------------- FUNCTIONS ----------------
+# ---------------- FUNCTIONS ---------------
 
 def log(msg):
     output.insert(tk.END, msg + "\n")
