@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File System Recovery & Optimization Tool | CSE316</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: #eee;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #00d2ff, #3a7bd5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+        }
+
+        /* Stats Dashboard */
+        .stats-dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #00d2ff;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #aaa;
+            margin-top: 5px;
+        }
+
+        /* Main Container */
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* Control Panel */
+        .control-panel {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #00d2ff;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            font-size: 14px;
+        }
+
+        input:focus {
+            outline: none;
+            border: 1px solid #00d2ff;
+        }
+
+        .instruction-box {
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            border-left: 3px solid #00d2ff;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            font-size: 13px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .btn-primary { background: linear-gradient(135deg, #00d2ff, #3a7bd5); color: white; }
+        .btn-danger { background: linear-gradient(135deg, #f093fb, #f5576c); color: white; }
+        .btn-warning { background: linear-gradient(135deg, #fa709a, #fee140); color: #333; }
+        .btn-success { background: linear-gradient(135deg, #a8edea, #fed6e3); color: #333; }
+        .btn-info { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+        .btn-dark { background: #2c3e50; color: white; }
+
+        /* Disk Panel */
+        .disk-panel {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .disk-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .selected-info {
+            background: rgba(241,196,15,0.3);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 8px;
+            margin: 20px 0;
+        }
+
+        .block {
+            aspect-ratio: 1;
+            background: rgba(255,255,255,0.15);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 10px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+        }
+
+        .block:hover {
+            transform: scale(1.05);
+            background: rgba(0,210,255,0.3);
+        }
+
+        .block.free {
+            background: rgba(46, 204, 113, 0.2);
+            border-color: #2ecc71;
+        }
+
+        .block.used {
+            background: rgba(231, 76, 60, 0.5);
+            border-color: #e74c3c;
+        }
+
+        .block.selected {
+            background: rgba(241, 196, 15, 0.8);
+            border: 2px solid #f1c40f;
+            transform: scale(1.05);
+        }
+
+        .block-index {
+            font-size: 9px;
+            opacity: 0.7;
+        }
+
+        .file-indicator {
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        /* File List Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border-radius: 20px;
+            padding: 25px;
+            width: 500px;
+            max-width: 90%;
+            max-height: 70%;
+            overflow-y: auto;
+            border: 1px solid #00d2ff;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            color: #00d2ff;
+        }
+
+        .close-btn {
+            cursor: pointer;
+            font-size: 24px;
+        }
+
+        .file-list-modal {
+            list-style: none;
+        }
+
+        .file-list-modal li {
+            background: rgba(255,255,255,0.1);
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            height: 25px;
+            background: #2c3e50;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d2ff, #3a7bd5);
+            transition: width 0.5s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        /* Console */
+        .console {
+            background: rgba(0,0,0,0.8);
+            border-radius: 15px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            color: #00d2ff;
+        }
+
+        .console-content {
+            height: 120px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #0f0;
+        }
+
+        .console-line {
+            padding: 3px 0;
+            border-bottom: 1px solid #333;
+        }
+
+        @media (max-width: 900px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+            .grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<h1>💾 File System Recovery & Optimization Tool</h1>
+<div class="subtitle">CSE316 - Operating Systems Project</div>
+
+<!-- Statistics Dashboard -->
+<div class="stats-dashboard">
+    <div class="stat-card">
+        <div class="stat-value" id="totalBlocks">0</div>
+        <div class="stat-label">Total Blocks</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="usedBlocks">0</div>
+        <div class="stat-label">Used Blocks</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="freeBlocks">0</div>
+        <div class="stat-label">Free Blocks</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="fragPercent">0%</div>
+        <div class="stat-label">Fragmentation</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="totalFiles">0</div>
+        <div class="stat-label">Total Files</div>
+    </div>
+</div>
+
+<div class="main-container">
+    <!-- Control Panel -->
+    <div class="control-panel">
+        <div class="instruction-box">
+            💡 <strong>How to use:</strong><br>
+            1. Enter file name<br>
+            2. Click on free blocks (green) to select them<br>
+            3. Click "Create File" to save<br>
+            4. Selected blocks will be allocated to your file
+        </div>
+
+        <div class="control-group">
+            <label>📄 File Name</label>
+            <input type="text" id="filename" placeholder="Enter file name (e.g., myfile.txt)">
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-primary" onclick="createFile()">➕ Create File</button>
+            <button class="btn-danger" onclick="deleteFile()">🗑️ Delete File</button>
+            <button class="btn-info" onclick="showDirectory()">📁 Directory</button>
+            <button class="btn-warning" onclick="searchFile()">🔍 Search</button>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-warning" onclick="simulateCrash()">💥 Simulate Crash</button>
+            <button class="btn-success" onclick="recoverFromCrash()">🔄 Recovery</button>
+            <button class="btn-info" onclick="createCheckpoint()">💾 Create Checkpoint</button>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-primary" onclick="optimizeDisk()">✨ Optimize Disk</button>
+            <button class="btn-success" onclick="analyzeFragmentation()">📊 Analyze Frag</button>
+            <button class="btn-dark" onclick="resetSystem()">🔄 Reset System</button>
+        </div>
+
+        <div class="btn-group">
+            <button onclick="createSampleFiles()">📁 Create Sample Files</button>
+        </div>
+    </div>
+
+    <!-- Disk Visualization -->
+    <div class="disk-panel">
+        <div class="disk-header">
+            <span>💿 <strong>Disk Blocks (40 blocks total)</strong></span>
+            <span class="selected-info" id="selectedCount">Selected: 0 blocks</span>
+        </div>
+        
+        <div class="grid" id="diskGrid"></div>
+
+        <!-- Usage Chart -->
+        <div class="progress-bar">
+            <div class="progress-fill" id="usageBar">0%</div>
+        </div>
+        <div id="fragDetails" style="font-size: 12px; text-align: center; margin-top: 8px;"></div>
+    </div>
+</div>
+
+<!-- Directory Modal -->
+<div id="directoryModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span>📁 File Directory</span>
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+        </div>
+        <div id="modalFileList"></div>
+    </div>
+</div>
+
+<!-- Console -->
+<div class="console">
+    <div class="console-header">
+        <span>🖥️ System Console</span>
+        <button onclick="clearConsole()" style="padding:2px 10px;">Clear</button>
+    </div>
+    <div class="console-content" id="console"></div>
+</div>
+
+<script>
+// ==================== CONFIGURATION ====================
+const TOTAL_BLOCKS = 40;
+let disk = new Array(TOTAL_BLOCKS).fill(null);
+let files = [];
+let checkpoints = [];
+let nextFileId = 0;
+let selectedBlocks = [];
+
+// ==================== UTILITY FUNCTIONS ====================
+function log(message, type = "info") {
+    const consoleDiv = document.getElementById("console");
+    const timestamp = new Date().toLocaleTimeString();
+    const colors = { info: "#0f0", error: "#f00", warning: "#ff0", success: "#0ff" };
+    const line = document.createElement("div");
+    line.className = "console-line";
+    line.style.color = colors[type] || "#0f0";
+    line.innerHTML = `[${timestamp}] ${message}`;
+    consoleDiv.appendChild(line);
+    consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    
+    while(consoleDiv.children.length > 100) {
+        consoleDiv.removeChild(consoleDiv.firstChild);
+    }
+}
+
+function clearConsole() {
+    document.getElementById("console").innerHTML = "";
+    log("Console cleared");
+}
+
+function updateUI() {
+    updateStats();
+    renderDisk();
+    updateFragmentationChart();
+}
+
+function updateStats() {
+    const usedBlocks = disk.filter(b => b !== null).length;
+    const freeBlocks = TOTAL_BLOCKS - usedBlocks;
+    const fragRate = calculateFragmentationRate();
+    
+    document.getElementById("totalBlocks").innerText = TOTAL_BLOCKS;
+    document.getElementById("usedBlocks").innerText = usedBlocks;
+    document.getElementById("freeBlocks").innerText = freeBlocks;
+    document.getElementById("totalFiles").innerText = files.length;
+    document.getElementById("fragPercent").innerText = fragRate.toFixed(1) + "%";
+    document.getElementById("usageBar").style.width = (usedBlocks/TOTAL_BLOCKS * 100) + "%";
+    document.getElementById("usageBar").innerHTML = `${(usedBlocks/TOTAL_BLOCKS * 100).toFixed(1)}% Used`;
+    document.getElementById("selectedCount").innerHTML = `Selected: ${selectedBlocks.length} blocks`;
+}
+
+function calculateFragmentationRate() {
+    let fragments = 0;
+    let inFragment = false;
+    
+    for(let i = 0; i < TOTAL_BLOCKS; i++) {
+        if(disk[i] === null) {
+            if(!inFragment) {
+                fragments++;
+                inFragment = true;
+            }
+        } else {
+            inFragment = false;
+        }
+    }
+    
+    const freeBlocks = disk.filter(b => b === null).length;
+    if(freeBlocks === 0) return 0;
+    return Math.min(100, (fragments / freeBlocks) * 100);
+}
+
+// ==================== ALLOCATION ====================
+function findFirstFitContiguous(size) {
+    let runLength = 0;
+    let startIndex = -1;
+    
+    for(let i = 0; i < TOTAL_BLOCKS; i++) {
+        if(disk[i] === null) {
+            if(startIndex === -1) {
+                startIndex = i;
+                runLength = 1;
+            } else {
+                runLength++;
+            }
+            if(runLength === size) {
+                return Array.from({length: size}, (_, k) => startIndex + k);
+            }
+        } else {
+            startIndex = -1;
+            runLength = 0;
+        }
+    }
+    return null;
+}
+
+// ==================== CORE FILE OPERATIONS ====================
+function createFile() {
+    const name = document.getElementById("filename").value.trim();
+    
+    if(!name) {
+        log("❌ Please enter a file name", "error");
+        return;
+    }
+    
+    if(files.find(f => f.name === name)) {
+        log(`❌ File "${name}" already exists`, "error");
+        return;
+    }
+    
+    if(selectedBlocks.length === 0) {
+        log("❌ Please select at least one block by clicking on free (green) blocks", "error");
+        return;
+    }
+    
+    // Check if selected blocks are all free
+    for(let block of selectedBlocks) {
+        if(disk[block] !== null) {
+            log(`❌ Block ${block} is already allocated!`, "error");
+            return;
+        }
+    }
+    
+    const blocks = [...selectedBlocks];
+    
+    // Allocate blocks
+    blocks.forEach(block => {
+        disk[block] = { fileId: nextFileId, type: "data" };
+    });
+    
+    files.push({
+        id: nextFileId,
+        name: name,
+        size: blocks.length,
+        blocks: blocks,
+        createdAt: new Date().toISOString()
+    });
+    
+    log(`✅ Created "${name}" using ${blocks.length} blocks → Blocks: [${blocks.join(", ")}]`, "success");
+    
+    nextFileId++;
+    selectedBlocks = [];
+    updateUI();
+    saveToLocalStorage();
+}
+
+function deleteFile() {
+    const name = document.getElementById("filename").value.trim();
+    const fileIndex = files.findIndex(f => f.name === name);
+    
+    if(fileIndex === -1) {
+        log(`❌ File "${name}" not found`, "error");
+        return;
+    }
+    
+    const file = files[fileIndex];
+    
+    file.blocks.forEach(block => {
+        disk[block] = null;
+    });
+    
+    files.splice(fileIndex, 1);
+    log(`🗑️ Deleted "${name}" - Freed ${file.blocks.length} blocks`, "warning");
+    
+    updateUI();
+    saveToLocalStorage();
+}
+
+function searchFile() {
+    const name = document.getElementById("filename").value.trim();
+    const file = files.find(f => f.name === name);
+    
+    if(file) {
+        log(`🔍 File "${name}" found:`, "success");
+        log(`   Size: ${file.size} blocks`, "info");
+        log(`   Blocks: [${file.blocks.join(", ")}]`, "info");
+        log(`   Created: ${new Date(file.createdAt).toLocaleString()}`, "info");
+    } else {
+        log(`❌ File "${name}" not found`, "error");
+    }
+}
+
+function showDirectory() {
+    const modal = document.getElementById("directoryModal");
+    const modalContent = document.getElementById("modalFileList");
+    
+    if(files.length === 0) {
+        modalContent.innerHTML = "<div style='text-align:center;padding:20px;color:#888'>No files created yet.</div>";
+    } else {
+        modalContent.innerHTML = `
+            <ul class="file-list-modal">
+                ${files.map(file => `
+                    <li>
+                        <div>
+                            <strong>📄 ${file.name}</strong><br>
+                            <small>${file.size} blocks | Blocks: [${file.blocks.join(", ")}]</small>
+                        </div>
+                    </li>
+                `).join('')}
+            </ul>
+        `;
+    }
+    
+    modal.style.display = "flex";
+    log("📁 Directory displayed", "info");
+}
+
+function closeModal() {
+    document.getElementById("directoryModal").style.display = "none";
+}
+
+// ==================== CRASH & RECOVERY ====================
+let lastBackup = null;
+
+function createCheckpoint() {
+    lastBackup = JSON.parse(JSON.stringify({ disk, files, nextFileId }));
+    checkpoints.push(lastBackup);
+    log(`💾 Checkpoint created (Total: ${checkpoints.length})`, "success");
+}
+
+function simulateCrash() {
+    if(!lastBackup) {
+        createCheckpoint();
+    }
+    
+    const corruptedBlocks = Math.floor(Math.random() * 8) + 3;
+    let corrupted = 0;
+    
+    for(let i = 0; i < TOTAL_BLOCKS && corrupted < corruptedBlocks; i++) {
+        if(disk[i] !== null && Math.random() > 0.7) {
+            disk[i] = null;
+            corrupted++;
+        }
+    }
+    
+    log(`💥 DISK CRASH SIMULATED! ${corrupted} blocks corrupted.`, "error");
+    updateUI();
+}
+
+function recoverFromCrash() {
+    if(!lastBackup) {
+        log("❌ No checkpoint available! Create a checkpoint first.", "error");
+        return;
+    }
+    
+    disk = JSON.parse(JSON.stringify(lastBackup.disk));
+    files = JSON.parse(JSON.stringify(lastBackup.files));
+    nextFileId = lastBackup.nextFileId;
+    selectedBlocks = [];
+    
+    log("🔄 SYSTEM RECOVERY COMPLETE! Data restored from checkpoint.", "success");
+    updateUI();
+}
+
+// ==================== OPTIMIZATION (DEFRAGMENTATION) ====================
+function optimizeDisk() {
+    if(files.length === 0) {
+        log("No files to optimize", "warning");
+        return;
+    }
+    
+    log("🔧 Starting disk optimization (Defragmentation)...", "info");
+    
+    const oldFrag = calculateFragmentationRate();
+    const oldFiles = JSON.parse(JSON.stringify(files));
+    const newDisk = new Array(TOTAL_BLOCKS).fill(null);
+    let currentPos = 0;
+    
+    // Sort files by creation date to maintain order
+    const sortedFiles = [...oldFiles].sort((a, b) => a.id - b.id);
+    
+    for(const file of sortedFiles) {
+        const newBlocks = [];
+        for(let i = 0; i < file.size; i++) {
+            newBlocks.push(currentPos);
+            newDisk[currentPos] = { fileId: file.id, type: "data" };
+            currentPos++;
+        }
+        file.blocks = newBlocks;
+    }
+    
+    disk = newDisk;
+    files = sortedFiles;
+    
+    const newFrag = calculateFragmentationRate();
+    log(`✨ OPTIMIZATION COMPLETE!`, "success");
+    log(`   Fragmentation: ${oldFrag.toFixed(1)}% → ${newFrag.toFixed(1)}%`, newFrag < oldFrag ? "success" : "info");
+    log(`   Files are now stored contiguously for better performance`, "info");
+    
+    updateUI();
+    saveToLocalStorage();
+}
+
+function analyzeFragmentation() {
+    const freeBlocks = disk.filter(b => b === null).length;
+    const usedBlocks = TOTAL_BLOCKS - freeBlocks;
+    const fragRate = calculateFragmentationRate();
+    
+    let fragments = 0;
+    let inFragment = false;
+    let fragmentSizes = [];
+    let currentSize = 0;
+    
+    for(let i = 0; i < TOTAL_BLOCKS; i++) {
+        if(disk[i] === null) {
+            if(!inFragment) {
+                fragments++;
+                inFragment = true;
+                currentSize = 1;
+            } else {
+                currentSize++;
+            }
+        } else {
+            if(inFragment) {
+                fragmentSizes.push(currentSize);
+                inFragment = false;
+            }
+        }
+    }
+    if(inFragment) fragmentSizes.push(currentSize);
+    
+    log("📊 FRAGMENTATION ANALYSIS", "info");
+    log(`   Total Blocks: ${TOTAL_BLOCKS}`, "info");
+    log(`   Used: ${usedBlocks} | Free: ${freeBlocks}`, "info");
+    log(`   Fragmentation Rate: ${fragRate.toFixed(2)}%`, fragRate > 30 ? "warning" : "success");
+    log(`   Free Fragments: ${fragments}`, "info");
+    log(`   Fragment Sizes: ${fragmentSizes.join(", ") || "None"}`, "info");
+    
+    if(fragRate > 50) {
+        log("   ⚠️ High fragmentation! Click 'Optimize Disk' to fix.", "warning");
+    } else if(fragRate > 20) {
+        log("   ⚠️ Moderate fragmentation. Optimization recommended.", "warning");
+    } else {
+        log("   ✅ Low fragmentation. Disk is well organized!", "success");
+    }
+    
+    document.getElementById("fragDetails").innerHTML = `📈 Free fragments: ${fragments} | Avg fragment: ${(freeBlocks/fragments).toFixed(1) || 0} blocks | Rate: ${fragRate.toFixed(1)}%`;
+}
+
+function updateFragmentationChart() {
+    const freeBlocks = disk.filter(b => b === null).length;
+    let fragments = 0;
+    let inFragment = false;
+    
+    for(let i = 0; i < TOTAL_BLOCKS; i++) {
+        if(disk[i] === null) {
+            if(!inFragment) {
+                fragments++;
+                inFragment = true;
+            }
+        } else {
+            inFragment = false;
+        }
+    }
+    const fragRate = calculateFragmentationRate();
+    document.getElementById("fragDetails").innerHTML = `📈 Free fragments: ${fragments} | Fragmentation: ${fragRate.toFixed(1)}%`;
+}
+
+// ==================== SAMPLE & UTILITIES ====================
+function createSampleFiles() {
+    const samples = [
+        { name: "document.txt", blocks: [0,1,2] },
+        { name: "image.png", blocks: [5,6] },
+        { name: "video.mp4", blocks: [10,11,12,13] },
+        { name: "music.mp3", blocks: [15,16] }
+    ];
+    
+    for(const sample of samples) {
+        // Check if blocks are free
+        let allFree = true;
+        for(let b of sample.blocks) {
+            if(disk[b] !== null) {
+                allFree = false;
+                break;
+            }
+        }
+        
+        if(allFree && !files.find(f => f.name === sample.name)) {
+            sample.blocks.forEach(block => {
+                disk[block] = { fileId: nextFileId, type: "data" };
+            });
+            files.push({
+                id: nextFileId,
+                name: sample.name,
+                size: sample.blocks.length,
+                blocks: sample.blocks,
+                createdAt: new Date().toISOString()
+            });
+            nextFileId++;
+        }
+    }
+    
+    log("📁 Sample files created!", "success");
+    updateUI();
+    saveToLocalStorage();
+}
+
+function resetSystem() {
+    if(confirm("⚠️ This will erase ALL files and data! Continue?")) {
+        disk = new Array(TOTAL_BLOCKS).fill(null);
+        files = [];
+        nextFileId = 0;
+        checkpoints = [];
+        lastBackup = null;
+        selectedBlocks = [];
+        log("🔄 System reset to initial state", "warning");
+        updateUI();
+        saveToLocalStorage();
+    }
+}
+
+// ==================== BLOCK SELECTION ====================
+function toggleBlock(blockIndex) {
+    if(disk[blockIndex] !== null) {
+        log(`⚠️ Block ${blockIndex} is already allocated to a file`, "warning");
+        return;
+    }
+    
+    const index = selectedBlocks.indexOf(blockIndex);
+    if(index === -1) {
+        selectedBlocks.push(blockIndex);
+    } else {
+        selectedBlocks.splice(index, 1);
+    }
+    
+    renderDisk();
+    updateStats();
+}
+
+// ==================== RENDERING ====================
+function renderDisk() {
+    const grid = document.getElementById("diskGrid");
+    grid.innerHTML = "";
+    
+    for(let i = 0; i < TOTAL_BLOCKS; i++) {
+        const block = document.createElement("div");
+        block.className = "block";
+        
+        if(disk[i] === null) {
+            block.classList.add("free");
+            if(selectedBlocks.includes(i)) {
+                block.classList.add("selected");
+                block.innerHTML = `<div class="block-index">${i}</div><div>✓</div>`;
+            } else {
+                block.innerHTML = `<div class="block-index">${i}</div><div>⬚</div>`;
+            }
+        } else {
+            block.classList.add("used");
+            const file = files.find(f => f.id === disk[i].fileId);
+            const fileName = file ? file.name.substring(0, 3) : "?";
+            block.innerHTML = `<div class="block-index">${i}</div><div class="file-indicator">📄${fileName}</div>`;
+        }
+        
+        block.onclick = () => toggleBlock(i);
+        grid.appendChild(block);
+    }
+}
+
+// ==================== PERSISTENCE ====================
+function saveToLocalStorage() {
+    const data = {
+        disk: disk,
+        files: files,
+        nextFileId: nextFileId,
+        checkpoints: checkpoints
+    };
+    localStorage.setItem("fileSystemData", JSON.stringify(data));
+}
+
+function loadFromLocalStorage() {
+    const saved = localStorage.getItem("fileSystemData");
+    if(saved) {
+        try {
+            const data = JSON.parse(saved);
+            disk = data.disk;
+            files = data.files;
+            nextFileId = data.nextFileId;
+            if(data.checkpoints) checkpoints = data.checkpoints;
+            if(checkpoints.length > 0) lastBackup = checkpoints[checkpoints.length - 1];
+            log("💾 Loaded saved state from previous session", "success");
+            updateUI();
+        } catch(e) {
+            log("⚠️ Could not load saved data", "warning");
+        }
+    }
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById("directoryModal");
+    if(event.target === modal) {
+        modal.style.display = "none";
+    }
+}
+
+// ==================== INITIALIZATION ====================
+function init() {
+    loadFromLocalStorage();
+    if(files.length === 0) {
+        createCheckpoint();
+    }
+    updateUI();
+    log("🚀 File System Simulator Ready!", "success");
+    log("💡 Click on green blocks to select them, then create a file", "info");
+}
+
+init();
+</script>
+</body>
+</html>
